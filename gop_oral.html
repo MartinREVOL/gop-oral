@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GOP — Martin Revol-Buisson</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #00ff88; --green-dim: #00cc66;
+    --bg: #050f05; --bg2: #0a1a0a; --bg3: #0d220d;
+    --amber: #ffaa00; --red: #ff4444; --cyan: #00ffcc;
+    --border: #00ff8833;
+  }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--green);
+    font-family: 'Share Tech Mono', monospace; font-size: 14px;
+    overflow: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.012) 2px, rgba(0,255,136,0.012) 4px);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* PROGRESS */
+  .progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: var(--bg3); z-index: 200; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green-dim), var(--green)); transition: width 0.4s; width: 0%; }
+
+  /* HEADER */
+  .hdr {
+    position: fixed; top: 2px; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 28px;
+    background: rgba(5,15,5,0.96); border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(4px);
+  }
+  .hdr-left { display: flex; align-items: center; gap: 10px; }
+  .dots { display: flex; gap: 5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot.r{background:var(--red)} .dot.y{background:var(--amber)} .dot.g{background:var(--green-dim)}
+  .term-id { font-family: 'VT323', monospace; font-size: 18px; color: var(--green-dim); letter-spacing: 2px; }
+  .hdr-right { display: flex; align-items: center; gap: 16px; }
+  .slide-id { font-size: 11px; color: #336633; }
+  .slide-id span { color: var(--cyan); }
+
+  /* SLIDE CONTAINER */
+  .stage {
+    position: fixed; inset: 0; top: 42px;
+    display: flex; align-items: stretch;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 32px 56px 70px 56px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; pointer-events: all; z-index: 1; }
+
+  /* SLIDE HEADER */
+  .slide-eyebrow { font-size: 11px; color: #336633; letter-spacing: 2px; margin-bottom: 8px; }
+  .slide-heading {
+    font-family: 'VT323', monospace;
+    font-size: clamp(36px, 6vw, 60px);
+    color: var(--green); line-height: 1; margin-bottom: 28px;
+  }
+  .slide-heading .accent { color: var(--cyan); }
+  .slide-heading .accent2 { color: var(--amber); }
+
+  /* REVEAL NODES — the core interaction */
+  .node-grid {
+    display: grid;
+    gap: 12px;
+  }
+  .node-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .node-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .node-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .node {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .node:hover { border-color: var(--green-dim); }
+  .node.revealed { border-color: var(--green-dim); background: #0d2a0d; }
+  .node.amber { border-left: 3px solid var(--amber); }
+  .node.amber.revealed { border-color: var(--amber); background: #1a1000; }
+  .node.cyan { border-left: 3px solid var(--cyan); }
+  .node.cyan.revealed { border-color: var(--cyan); background: #001a1a; }
+  .node.red { border-left: 3px solid var(--red); }
+  .node.red.revealed { border-color: var(--red); background: #1a0505; }
+
+  .node-keyword {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--green);
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .node.amber .node-keyword { color: var(--amber); }
+  .node.cyan .node-keyword { color: var(--cyan); }
+  .node.red .node-keyword { color: var(--red); }
+
+  .node-icon {
+    font-size: 11px; color: #336633; margin-bottom: 6px;
+    transition: color 0.2s;
+  }
+  .node.revealed .node-icon { color: var(--green-dim); }
+
+  .node-detail {
+    font-size: 12px; color: #669966; margin-top: 10px;
+    line-height: 1.6; display: none; border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+  .node.revealed .node-detail { display: block; }
+
+  .node-hint {
+    position: absolute; bottom: 8px; right: 10px;
+    font-size: 10px; color: #336633;
+    transition: color 0.2s;
+  }
+  .node.revealed .node-hint { display: none; }
+
+  /* SCHEMA — flow diagram via CSS */
+  .schema { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 16px 0; }
+  .schema-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 8px 14px; font-size: 12px; color: #aaffaa;
+    text-align: center; min-width: 90px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.4s, transform 0.4s, border-color 0.2s;
+  }
+  .schema-box.show { opacity: 1; transform: translateY(0); }
+  .schema-box.amber { border-color: var(--amber); color: var(--amber); }
+  .schema-box.cyan { border-color: var(--cyan); color: var(--cyan); }
+  .schema-box.red { border-color: var(--red); color: var(--red); }
+  .schema-arrow {
+    font-family: 'VT323', monospace; font-size: 20px; color: #336633;
+    padding: 0 6px; opacity: 0; transition: opacity 0.4s;
+  }
+  .schema-arrow.show { opacity: 1; }
+
+  /* TIMELINE vertical */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-row { display: grid; grid-template-columns: 24px 1fr; gap: 0 14px; }
+  .tl-line { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: #336633; border: 2px solid var(--bg2); flex-shrink: 0; margin-top: 4px; transition: background 0.3s; }
+  .tl-row.revealed .tl-dot { background: var(--green-dim); }
+  .tl-bar { flex: 1; width: 2px; background: var(--border); margin: 4px auto 0; }
+  .tl-content { padding-bottom: 16px; }
+  .tl-tag {
+    display: inline-block; font-size: 10px; padding: 2px 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: #336633; letter-spacing: 1px; margin-bottom: 6px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tl-tag:hover { border-color: var(--green-dim); color: var(--green-dim); }
+  .tl-row.revealed .tl-tag { border-color: var(--green-dim); color: var(--green-dim); }
+  .tl-body { font-size: 12px; color: #669966; line-height: 1.6; display: none; }
+  .tl-row.revealed .tl-body { display: block; }
+
+  /* STAT highlight */
+  .stat-row { display: flex; align-items: baseline; gap: 12px; margin: 6px 0; }
+  .stat-num { font-family: 'VT323', monospace; font-size: 36px; color: var(--amber); }
+  .stat-label { font-size: 12px; color: #669966; }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 28px;
+    background: rgba(5,15,5,0.96); border-top: 1px solid var(--border);
+  }
+  .nav-btn {
+    font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 1px;
+    padding: 7px 18px; border: 1px solid var(--green-dim); background: var(--bg3);
+    color: var(--green); cursor: pointer; transition: all 0.2s;
+  }
+  .nav-btn:hover { border-color: var(--green); background: #0d2a0d; }
+  .nav-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+  .nav-dots-row { display: flex; gap: 8px; }
+  .nav-dot-sm {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #336633; border: none; cursor: pointer; transition: all 0.2s;
+  }
+  .nav-dot-sm.active { background: var(--green); transform: scale(1.3); }
+  .reveal-all-btn {
+    font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    padding: 5px 12px; border: 1px solid #336633; background: transparent;
+    color: #336633; cursor: pointer; transition: all 0.2s;
+  }
+  .reveal-all-btn:hover { border-color: var(--green-dim); color: var(--green-dim); }
+
+  @media (max-width: 700px) {
+    .slide { padding: 24px 20px 70px 20px; }
+    .node-grid.cols-3, .node-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+    .node-grid.cols-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-fill" id="prog"></div></div>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+    <div class="term-id">GOP_SOUTENANCE</div>
+  </div>
+  <div class="hdr-right">
+    <div class="slide-id">slide <span id="cur-n">1</span> / <span id="tot-n">6</span></div>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- ═══ SLIDE 0 : INTRO ═══ -->
+  <div class="slide active" id="s0">
+    <div class="slide-eyebrow">// martin@dev:~ · GOP · ICAN Paris</div>
+    <div class="slide-heading">Martin<br/><span class="accent">Revol-Buisson</span></div>
+
+    <div class="node-grid cols-3" style="margin-bottom:14px;">
+      <div class="node cyan" onclick="reveal(this)">
+        <div class="node-icon">// SPÉCIALITÉ</div>
+        <div class="node-keyword">Game Dev</div>
+        <div class="node-detail">C++ · Unreal Engine 5 · Unity 6 · Blueprints · VR</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// MOBILE</div>
+        <div class="node-keyword">Android</div>
+        <div class="node-detail">Kotlin · Java · Android Studio · Unity Mobile</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// DATA & AUTO</div>
+        <div class="node-keyword">Power BI</div>
+        <div class="node-detail">DAX · Power Automate · PAD · SQL</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+
+    <div class="node-grid cols-3">
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// ALTERNANCE</div>
+        <div class="node-keyword">Michelin</div>
+        <div class="node-detail">Clermont-Ferrand · Digital Developer · Sept. 2024 - en cours</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// PROJETS ÉQUIPE</div>
+        <div class="node-keyword">3 jeux livrés</div>
+        <div class="node-detail">Onryō · Wendogo · GollumGO — playables sur itch.io</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// FREELANCE</div>
+        <div class="node-keyword">2 missions</div>
+        <div class="node-detail">Appli éveil musical (Pirouette Cacahouète) · Logiciel diététicienne</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 1 : WENDOGO ARCHI ═══ -->
+  <div class="slide" id="s1">
+    <div class="slide-eyebrow">// CHOIX TECHNIQUE · WENDOGO</div>
+    <div class="slide-heading"><span class="accent2">Archi</span> réseau</div>
+
+    <!-- schema revealed progressively -->
+    <div class="schema" id="schema-w" style="margin-bottom:20px;">
+      <div class="schema-box cyan" id="sw0">Dev A<br/><span style="font-size:10px;color:#669966">besoins</span></div>
+      <div class="schema-arrow" id="sa0">→</div>
+      <div class="schema-box" id="sw1" style="background:#001a1a; border-color:var(--cyan); color:var(--cyan); font-size:13px; padding:12px 18px;">
+        Classe<br/>Serveur<br/><span style="font-size:10px;color:#669966">centralisée</span>
+      </div>
+      <div class="schema-arrow" id="sa1">→</div>
+      <div class="schema-box cyan" id="sw2">Dev B<br/><span style="font-size:10px;color:#669966">besoins</span></div>
+    </div>
+
+    <div class="node-grid cols-2">
+      <div class="node cyan" onclick="revealSchema()">
+        <div class="node-icon">// LE CHOIX</div>
+        <div class="node-keyword">Classe centralisée</div>
+        <div class="node-detail">Toutes les méthodes serveur au même endroit. Les autres devs communiquent leurs besoins, je complète.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// POURQUOI</div>
+        <div class="node-keyword">Équipe d'abord</div>
+        <div class="node-detail">3 programmeurs sur le même layer réseau = conflits constants. L'architecture sert l'organisation autant que la technique.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// STACK</div>
+        <div class="node-keyword">Netcode</div>
+        <div class="node-detail">Unity Netcode for GameObjects · Server-authoritative · Actions validées côté serveur avant diffusion aux clients</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// CARTES</div>
+        <div class="node-keyword">CardEffect</div>
+        <div class="node-detail">Classe abstraite CardEffect · ScriptableObject CardDatabaseSO · Ajouter une carte = créer une classe, override une méthode</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 2 : WENDOGO SCOPE ═══ -->
+  <div class="slide" id="s2">
+    <div class="slide-eyebrow">// DIFFICULTÉ · WENDOGO</div>
+    <div class="slide-heading">Gestion<br/>du <span class="accent2">scope</span></div>
+
+    <div class="timeline">
+      <div class="tl-row" onclick="revealTl(this)">
+        <div class="tl-line"><div class="tl-dot"></div><div class="tl-bar"></div></div>
+        <div class="tl-content">
+          <div class="tl-tag">// LA DEMANDE</div>
+          <div class="tl-body">
+            <div class="stat-row"><span class="stat-num">27</span><span class="stat-label">mécaniques demandées par les designers</span></div>
+            Minimum requis dans les consignes : 9. On a accepté sans challenger.
+          </div>
+        </div>
+      </div>
+      <div class="tl-row" onclick="revealTl(this)">
+        <div class="tl-line"><div class="tl-dot"></div><div class="tl-bar"></div></div>
+        <div class="tl-content">
+          <div class="tl-tag">// LA RÉALITÉ</div>
+          <div class="tl-body">
+            <div class="stat-row"><span class="stat-num">17</span><span class="stat-label">mécaniques livrées sur le fil</span></div>
+            Prise de conscience trop tardive. Ajustement en urgence.
+          </div>
+        </div>
+      </div>
+      <div class="tl-row" onclick="revealTl(this)">
+        <div class="tl-line"><div class="tl-dot"></div></div>
+        <div class="tl-content">
+          <div class="tl-tag">// L'ENSEIGNEMENT</div>
+          <div class="tl-body">
+            Le dev a une responsabilité de cadrage vis-à-vis des autres corps de métier. Ce n'est pas refuser de collaborer — c'est protéger le projet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 3 : ONRYO ═══ -->
+  <div class="slide" id="s3">
+    <div class="slide-eyebrow">// DÉCISION & PROGRESSION · ONRYŌ</div>
+    <div class="slide-heading">IA <span class="accent">ennemis</span></div>
+
+    <!-- progression schema -->
+    <div class="schema" style="margin-bottom:20px; flex-direction:column; gap:8px; align-items:flex-start;">
+      <div style="display:flex; align-items:center; gap:0; width:100%;">
+        <div class="schema-box show" style="font-size:11px;">GollumGO<br/><span style="color:#669966;font-size:10px;">BFS custom</span></div>
+        <div class="schema-arrow show">→</div>
+        <div class="schema-box show" style="font-size:11px;">Onryō<br/><span style="color:#669966;font-size:10px;">Behavior Trees</span></div>
+        <div class="schema-arrow show">→</div>
+        <div class="schema-box cyan show" style="font-size:11px;">Myceland<br/><span style="color:var(--cyan);font-size:10px;">C++ pur</span></div>
+      </div>
+    </div>
+
+    <div class="node-grid cols-2">
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// STRUCTURE</div>
+        <div class="node-keyword">Classe mère</div>
+        <div class="node-detail">Base commune à tous les ennemis : stun partagé, conditions de sortie. Chaque type hérite et surcharge son comportement propre.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node red" onclick="reveal(this)">
+        <div class="node-icon">// BEHAVIOR TREES</div>
+        <div class="node-keyword">Choix contraint</div>
+        <div class="node-detail">Choix contraint par le niveau du moment. Les cours portaient sur les BT. J'aurais préféré du C++ pur — plus de contrôle, cohérence avec le reste du codebase (95.7% C++).</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// BASE</div>
+        <div class="node-keyword">Sentinel vs Base</div>
+        <div class="node-detail">Base : focus → pursue → shoot. Sentinel : patrol → lock on → engage. Même stun state, logiques différentes.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node cyan" onclick="reveal(this)">
+        <div class="node-icon">// DUAL CONTROLLER</div>
+        <div class="node-keyword">IA / Joueur</div>
+        <div class="node-detail">Même Pawn sous AIController ou PlayerController. Possession = swap de controller, pas de changement de logique.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 4 : MICHELIN ═══ -->
+  <div class="slide" id="s4">
+    <div class="slide-eyebrow">// AUTONOMIE & POSTURE · MICHELIN</div>
+    <div class="slide-heading"><span class="accent2">Hors</span> formation</div>
+
+    <div class="node-grid cols-2" style="margin-bottom:12px;">
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// CHEF DE PROJET</div>
+        <div class="node-keyword">2 salles digitales</div>
+        <div class="node-detail">A à Z : budget, matériel, coordination équipes, planning, livraison. Réunions managers et direction site.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// PAD</div>
+        <div class="node-keyword">-80%</div>
+        <div class="node-detail">
+          <div class="stat-row"><span class="stat-num" style="font-size:28px;">45s</span><span class="stat-label">de gain par fichier archivé</span></div>
+          Deux applications bureaux : gestion des effectifs France + automatisation archivage.
+        </div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// POWER BI</div>
+        <div class="node-keyword">DAX · Suivi formations</div>
+        <div class="node-detail">Rapports interactifs pour le suivi des formations employés. Site Cataroux — manufacture pneumatiques de compétition.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// VR</div>
+        <div class="node-keyword">Capsules formation</div>
+        <div class="node-detail">Création de capsules VR sur la prévention et la sécurité machines. Gestion de flotte de casques.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+
+    <div class="node amber" onclick="reveal(this)" style="border-left-width:3px;">
+      <div class="node-icon">// LA VRAIE DIFFICULTÉ</div>
+      <div class="node-keyword">Posture</div>
+      <div class="node-detail">Passer d'un étudiant qui a peur de l'échec à quelqu'un qui ose et insiste. Dans l'industrie, c'est d'autant plus difficile — et nécessaire.</div>
+      <div class="node-hint">cliquer</div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 5 : CONCLUSION ═══ -->
+  <div class="slide" id="s5">
+    <div class="slide-eyebrow">// FIL ROUGE</div>
+    <div class="slide-heading">Ce que<br/>j'en <span class="accent">tire</span></div>
+
+    <div class="node-grid cols-2">
+      <div class="node cyan" onclick="reveal(this)">
+        <div class="node-icon">// 01</div>
+        <div class="node-keyword">Code pour l'équipe</div>
+        <div class="node-detail">L'archi réseau de Wendogo n'était pas qu'un choix technique — c'était une décision organisationnelle.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// 02</div>
+        <div class="node-keyword">Savoir dire stop</div>
+        <div class="node-detail">27 → 17 cartes. Chez Michelin aussi. Le dev cadre ce qui est faisable. C'est une responsabilité, pas un refus.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node" onclick="reveal(this)">
+        <div class="node-icon">// 03</div>
+        <div class="node-keyword">Progresser à chaque projet</div>
+        <div class="node-detail">BT sur Onryō parce que c'était mon niveau. C++ aujourd'hui. Chaque projet repousse une limite.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+      <div class="node amber" onclick="reveal(this)">
+        <div class="node-icon">// 04</div>
+        <div class="node-keyword">Oser et insister</div>
+        <div class="node-detail">La transformation la plus importante n'est pas technique. C'est la posture. Décider et assumer.</div>
+        <div class="node-hint">cliquer</div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px; text-align:center; font-size:12px; color:#336633;">
+      <span style="color:var(--cyan);">martin@dev:~$</span> open
+      <a href="https://martinrevol.github.io/portfolio" target="_blank" style="color:var(--green); text-decoration:underline; margin-left:6px;">martinrevol.github.io/portfolio</a>
+    </div>
+  </div>
+
+</div><!-- /stage -->
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-btn" id="btn-prev" onclick="go(-1)" disabled>← prev</button>
+  <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+    <div class="nav-dots-row" id="navDots"></div>
+    <button class="reveal-all-btn" onclick="revealAll()">tout révéler</button>
+  </div>
+  <button class="nav-btn" id="btn-next" onclick="go(1)">next →</button>
+</div>
+
+<script>
+  const N = 6;
+  let cur = 0;
+
+  // Build nav dots
+  const dotsEl = document.getElementById('navDots');
+  for(let i=0;i<N;i++){
+    const d=document.createElement('button');
+    d.className='nav-dot-sm'+(i===0?' active':'');
+    d.onclick=()=>goTo(i);
+    dotsEl.appendChild(d);
+  }
+  document.getElementById('tot-n').textContent=N;
+
+  function goTo(i){
+    document.getElementById('s'+cur).classList.remove('active');
+    dotsEl.children[cur].classList.remove('active');
+    cur=Math.max(0,Math.min(i,N-1));
+    document.getElementById('s'+cur).classList.add('active');
+    dotsEl.children[cur].classList.add('active');
+    document.getElementById('cur-n').textContent=cur+1;
+    document.getElementById('prog').style.width=((cur/(N-1))*100)+'%';
+    document.getElementById('btn-prev').disabled=cur===0;
+    document.getElementById('btn-next').disabled=cur===N-1;
+  }
+  function go(d){ goTo(cur+d); }
+
+  // Reveal a single node
+  function reveal(el){
+    el.classList.toggle('revealed');
+  }
+
+  // Reveal all on current slide
+  function revealAll(){
+    const slide=document.getElementById('s'+cur);
+    slide.querySelectorAll('.node:not(.revealed)').forEach(n=>n.classList.add('revealed'));
+    slide.querySelectorAll('.tl-row:not(.revealed)').forEach(n=>n.classList.add('revealed'));
+    // schema
+    if(cur===1) showSchema();
+  }
+
+  // Timeline rows
+  function revealTl(el){
+    el.classList.toggle('revealed');
+  }
+
+  // Wendogo schema progressive reveal
+  let schemaStep=0;
+  function revealSchema(){
+    const ids=['sw0','sa0','sw1','sa1','sw2'];
+    if(schemaStep<ids.length){
+      document.getElementById(ids[schemaStep]).classList.add('show');
+      schemaStep++;
+    }
+    // also reveal the node
+    event.currentTarget && event.currentTarget.classList.add('revealed');
+  }
+  function showSchema(){
+    ['sw0','sa0','sw1','sa1','sw2'].forEach(id=>document.getElementById(id).classList.add('show'));
+    schemaStep=5;
+  }
+
+  // Keyboard
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); go(1); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); go(-1); }
+  });
+
+  // Touch
+  let tx=0;
+  document.addEventListener('touchstart',e=>{ tx=e.touches[0].clientX; });
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx;
+    if(Math.abs(dx)>50) go(dx<0?1:-1);
+  });
+</script>
+</body>
+</html>
