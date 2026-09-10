@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Martin Revol-Buisson — GOP</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #00ff88; --green-dim: #00cc66;
+    --bg: #050f05; --bg2: #0a1a0a; --bg3: #0d220d;
+    --amber: #ffaa00; --red: #ff4444; --cyan: #00ffcc;
+    --border: #00ff8833;
+  }
+  body {
+    background: var(--bg); color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px; line-height: 1.6; min-height: 100vh;
+    padding: 0;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.012) 2px, rgba(0,255,136,0.012) 4px);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* HEADER */
+  .hdr {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 28px;
+    background: rgba(5,15,5,0.97);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(4px);
+  }
+  .hdr-left { display: flex; align-items: center; gap: 10px; }
+  .dots { display: flex; gap: 5px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .dot.r{background:var(--red)} .dot.y{background:var(--amber)} .dot.g{background:var(--green-dim)}
+  .term-id { font-family: 'VT323', monospace; font-size: 18px; color: var(--green-dim); letter-spacing: 2px; }
+  .hdr-right { display: flex; gap: 10px; align-items: center; }
+  .hdr-link { font-size: 11px; color: var(--cyan); text-decoration: underline; letter-spacing: 1px; }
+
+  /* WRAP */
+  .wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 32px 28px 60px; }
+
+  /* HERO */
+  .hero {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    padding: 24px 28px; margin-bottom: 32px;
+    display: grid; grid-template-columns: auto 1fr; gap: 0 28px; align-items: center;
+  }
+  .hero-portrait img {
+    width: 72px; height: 72px; border-radius: 50%;
+    object-fit: cover; object-position: center top;
+    border: 2px solid var(--green-dim);
+    filter: grayscale(20%);
+  }
+  .hero-name { font-family: 'VT323', monospace; font-size: 42px; color: var(--green); line-height: 1; }
+  .hero-name span { color: var(--cyan); }
+  .hero-title { font-size: 12px; color: #aaffaa; margin-top: 4px; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
+  .hero-tag {
+    font-size: 11px; padding: 2px 10px;
+    background: var(--bg3); border: 1px solid var(--green-dim);
+    color: var(--green); letter-spacing: 1px;
+  }
+  .hero-tag.amber { border-color: var(--amber); color: var(--amber); }
+  .hero-tag.cyan { border-color: var(--cyan); color: var(--cyan); }
+
+  /* SECTION */
+  .section { margin-bottom: 28px; }
+  .cmd-line { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .cmd-prefix { color: var(--cyan); font-size: 12px; }
+  .cmd-text { font-family: 'VT323', monospace; font-size: 22px; color: var(--green); letter-spacing: 1px; }
+
+  /* PROJECT CARDS */
+  .projects { display: flex; flex-direction: column; gap: 14px; }
+
+  .project-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .project-card.gold { border-left: 3px solid #E0C48C; }
+  .project-card.red { border-left: 3px solid var(--red); }
+  .project-card.blue { border-left: 3px solid #7799ee; }
+  .project-card.green { border-left: 3px solid var(--green-dim); }
+  .project-card.amber { border-left: 3px solid var(--amber); }
+
+  .project-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .project-header:hover { background: #0d2a0d; }
+  .project-header-left { display: flex; align-items: center; gap: 12px; }
+  .project-num { font-family: 'VT323', monospace; font-size: 22px; color: var(--cyan); min-width: 28px; }
+  .project-name { font-size: 14px; color: #aaffaa; font-weight: bold; }
+  .project-type { font-size: 11px; color: #669966; margin-top: 2px; }
+  .project-toggle { font-size: 13px; color: #336633; transition: transform 0.2s; }
+  .project-card.open .project-toggle { transform: rotate(90deg); }
+
+  .project-body { display: none; padding: 0 16px 16px 56px; }
+  .project-card.open .project-body { display: block; }
+
+  .project-desc { font-size: 12px; color: #669966; margin-bottom: 12px; line-height: 1.6; }
+
+  .tech-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .tech-tag {
+    font-size: 10px; padding: 1px 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: #669966; letter-spacing: 0.5px;
+  }
+
+  /* VIDEO LINKS */
+  .video-links { display: flex; flex-direction: column; gap: 8px; }
+  .video-link {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 10px 14px; text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .video-link:hover { border-color: var(--green-dim); background: #0d2a0d; }
+  .video-icon { font-family: 'VT323', monospace; font-size: 18px; color: var(--red); min-width: 20px; }
+  .video-label { font-size: 11px; color: #669966; }
+  .video-title { font-size: 12px; color: #aaffaa; }
+  .video-arrow { margin-left: auto; font-size: 12px; color: #336633; }
+
+  /* OTHER LINKS */
+  .other-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .other-link {
+    font-size: 11px; padding: 5px 12px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--green); text-decoration: none; letter-spacing: 1px;
+    transition: border-color 0.2s;
+  }
+  .other-link:hover { border-color: var(--green-dim); }
+  .other-link.play { border-color: var(--green-dim); color: var(--cyan); }
+
+  /* XP SECTION */
+  .xp-list { display: flex; flex-direction: column; gap: 10px; }
+  .xp-item {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    padding: 12px 16px;
+  }
+  .xp-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .xp-title { font-size: 13px; color: #aaffaa; font-weight: bold; }
+  .xp-date { font-size: 11px; color: #336633; }
+  .xp-company { font-size: 11px; color: var(--amber); margin-top: 2px; }
+  .xp-desc { font-size: 12px; color: #669966; margin-top: 6px; line-height: 1.55; }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 40px; border-top: 1px solid var(--border);
+    padding-top: 16px; font-size: 11px; color: #336633;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  .footer a { color: var(--cyan); text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 20px 16px 40px; }
+    .hero { grid-template-columns: 1fr; gap: 12px; }
+    .hero-portrait { display: none; }
+    .hdr { padding: 10px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+    <div class="term-id">PORTFOLIO · GOP 2025</div>
+  </div>
+  <div class="hdr-right">
+    <a class="hdr-link" href="https://martinrevol.github.io/portfolio" target="_blank">↗ portfolio complet</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-portrait">
+      <img src="asset/portrait.png" alt="Martin Revol-Buisson" />
+    </div>
+    <div>
+      <div class="hero-name">Martin <span>Revol-Buisson</span></div>
+      <div class="hero-title">Software Engineer / Game Programmer · 22 ans · Clermont-Ferrand</div>
+      <div class="hero-meta">
+        <span class="hero-tag">C++</span>
+        <span class="hero-tag">UE5</span>
+        <span class="hero-tag">Unity</span>
+        <span class="hero-tag cyan">Kotlin · Android</span>
+        <span class="hero-tag amber">Power BI · DAX</span>
+        <span class="hero-tag amber">Power Automate</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJETS -->
+  <div class="section">
+    <div class="cmd-line">
+      <span class="cmd-prefix">martin@dev:~$</span>
+      <span class="cmd-text">ls ./projects/</span>
+    </div>
+    <div class="projects">
+
+      <!-- ONRYO -->
+      <div class="project-card red" onclick="toggle(this)">
+        <div class="project-header">
+          <div class="project-header-left">
+            <div class="project-num">01</div>
+            <div>
+              <div class="project-name">Onryō</div>
+              <div class="project-type">Fast Arena FPS · UE5 · C++ · 6 personnes · 2-3 mois</div>
+            </div>
+          </div>
+          <div class="project-toggle">▶</div>
+        </div>
+        <div class="project-body">
+          <div class="project-desc">FPS set in feudal Japan. You play as a vengeful spirit — possess enemies to steal their weapons and abilities. Mon rôle : <strong style="color:#aaffaa">systèmes de comportement IA de tous les ennemis</strong>, architecture dual controller (AI/Player).</div>
+          <div class="tech-row">
+            <span class="tech-tag">UE5</span><span class="tech-tag">C++ 95.7%</span><span class="tech-tag">AI State Machines</span><span class="tech-tag">Dual Controller</span>
+          </div>
+          <div class="video-links">
+            <a class="video-link" href="https://www.youtube.com/watch?v=Z4lanWCPNc0" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// INTRO CINEMATIC</div><div class="video-title">Onryō — Intro cinématique</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+            <a class="video-link" href="https://www.youtube.com/watch?v=vS6ohU32nXc" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// GAMEPLAY</div><div class="video-title">Onryō — Gameplay footage</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+          </div>
+          <div class="other-links">
+            <a class="other-link play" href="https://al3xics.itch.io/onryo" target="_blank">↗ Jouer sur itch.io</a>
+            <a class="other-link" href="https://github.com/MartinREVOL/Onryo" target="_blank">↗ GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- WENDOGO -->
+      <div class="project-card blue" onclick="toggle(this)">
+        <div class="project-header">
+          <div class="project-header-left">
+            <div class="project-num">02</div>
+            <div>
+              <div class="project-name">Wendogo</div>
+              <div class="project-type">Social Deduction Mobile · Unity 6 · Android · 10 personnes · 3-4 mois</div>
+            </div>
+          </div>
+          <div class="project-toggle">▶</div>
+        </div>
+        <div class="project-body">
+          <div class="project-desc">Jeu de cartes multijoueur mobile — rôles cachés, phases jour/nuit, voice chat intégré. Mon rôle : <strong style="color:#aaffaa">architecture réseau complète (Netcode)</strong> + hiérarchie des mécaniques de cartes.</div>
+          <div class="tech-row">
+            <span class="tech-tag">Unity 6</span><span class="tech-tag">C#</span><span class="tech-tag">Android</span><span class="tech-tag">Netcode for GameObjects</span><span class="tech-tag">Vivox</span>
+          </div>
+          <div class="video-links">
+            <a class="video-link" href="https://www.youtube.com/watch?v=2Q6IVq2wU98" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// INTRO</div><div class="video-title">Wendogo — Intro vidéo</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+            <a class="video-link" href="https://www.youtube.com/watch?v=zt8xDrfJs-w" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// GAMEPLAY</div><div class="video-title">Wendogo — Gameplay</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+            <a class="video-link" href="https://www.youtube.com/watch?v=FH5ehlHi69k" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// TRAILER</div><div class="video-title">Wendogo — Trailer</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+          </div>
+          <div class="other-links">
+            <a class="other-link play" href="https://drive.google.com/file/d/19LDGTqjWH-lMRHkn-VcV9go9QVqIqXO6/view" target="_blank">↗ Télécharger APK</a>
+            <a class="other-link" href="https://github.com/MartinREVOL/Wendogo" target="_blank">↗ GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOLLUMGO -->
+      <div class="project-card gold" onclick="toggle(this)">
+        <div class="project-header">
+          <div class="project-header-left">
+            <div class="project-num">03</div>
+            <div>
+              <div class="project-name">GollumGO</div>
+              <div class="project-type">Tactical Puzzle · UE5 · Blueprints · 6 personnes · 3 mois</div>
+            </div>
+          </div>
+          <div class="project-toggle">▶</div>
+        </div>
+        <div class="project-body">
+          <div class="project-desc">Puzzle tactique tour par tour dans les Marais des Morts — jouer Gollum, utiliser l'Anneau stratégiquement. Mon rôle : <strong style="color:#aaffaa">pathfinding BFS custom case par case</strong> + placement multi-IA sans overlap.</div>
+          <div class="tech-row">
+            <span class="tech-tag">UE5</span><span class="tech-tag">Blueprints</span><span class="tech-tag">BFS</span><span class="tech-tag">Turn-based</span>
+          </div>
+          <div class="video-links">
+            <a class="video-link" href="https://www.youtube.com/watch?v=pxMsG4oZtjA" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// TRAILER</div><div class="video-title">GollumGO — Gameplay trailer</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+            <a class="video-link" href="https://www.youtube.com/watch?v=R9TGvu0C7nc" target="_blank">
+              <span class="video-icon">▶</span>
+              <div><div class="video-label">// TEASER</div><div class="video-title">GollumGO — Teaser</div></div>
+              <span class="video-arrow">↗</span>
+            </a>
+          </div>
+          <div class="other-links">
+            <a class="other-link play" href="https://al3xics.itch.io/gollumgo" target="_blank">↗ Jouer sur itch.io</a>
+            <a class="other-link" href="https://github.com/MartinREVOL/GollumGO" target="_blank">↗ GitHub</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- MYCELAND -->
+      <div class="project-card green" onclick="toggle(this)">
+        <div class="project-header">
+          <div class="project-header-left">
+            <div class="project-num">04</div>
+            <div>
+              <div class="project-name">Myceland <span style="font-size:11px;color:var(--amber)">[WIP]</span></div>
+              <div class="project-type">Puzzle Narratif · UE5 · C++ · 9 personnes · ~1 an</div>
+            </div>
+          </div>
+          <div class="project-toggle">▶</div>
+        </div>
+        <div class="project-body">
+          <div class="project-desc">Jeu de puzzle narratif — revivifier un monde détruit en plantant des champignons. Mon rôle : <strong style="color:#aaffaa">wave propagation system, génération de grille, outils éditeur</strong> pour les designers.</div>
+          <div class="tech-row">
+            <span class="tech-tag">UE5</span><span class="tech-tag">C++ 93%</span><span class="tech-tag">Wave Propagation</span><span class="tech-tag">Editor Tools</span>
+          </div>
+          <div class="other-links">
+            <a class="other-link" href="https://github.com/MartinREVOL/Myceland" target="_blank">↗ GitHub</a>
+            <a class="other-link" href="https://martinrevol.github.io/portfolio" target="_blank">↗ Portfolio</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALTERNATIVE CONTROLLER -->
+      <div class="project-card amber" onclick="toggle(this)">
+        <div class="project-header">
+          <div class="project-header-left">
+            <div class="project-num">05</div>
+            <div>
+              <div class="project-name">Alternative Controller</div>
+              <div class="project-type">Expérience visuelle · UE5 · Niagara · Hardware custom</div>
+            </div>
+          </div>
+          <div class="project-toggle">▶</div>
+        </div>
+        <div class="project-body">
+          <div class="project-desc">Expérience visuelle avec controller physique custom — souffler dans un ballon pour avancer, tourner un volant pour diriger. Sphère de particules Niagara qui absorbe les couleurs des néons environnants.</div>
+          <div class="tech-row">
+            <span class="tech-tag">UE5</span><span class="tech-tag">Niagara</span><span class="tech-tag">Hardware</span><span class="tech-tag">Particles</span>
+          </div>
+          <div class="other-links">
+            <a class="other-link" href="https://github.com/MartinREVOL/AlternativeController" target="_blank">↗ GitHub</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EXPÉRIENCES -->
+  <div class="section">
+    <div class="cmd-line">
+      <span class="cmd-prefix">martin@dev:~$</span>
+      <span class="cmd-text">cat experience.log</span>
+    </div>
+    <div class="xp-list">
+
+      <div class="xp-item">
+        <div class="xp-header">
+          <div class="xp-title">Digital Developer — Alternance</div>
+          <div class="xp-date">Sept. 2024 - en cours</div>
+        </div>
+        <div class="xp-company">Michelin · Clermont-Ferrand</div>
+        <div class="xp-desc">Chef de projet sur 2 salles digitales · Capsules VR prévention/sécurité · Power BI DAX · Power Automate &amp; PAD (-80% temps d'archivage)</div>
+      </div>
+
+      <div class="xp-item">
+        <div class="xp-header">
+          <div class="xp-title">Développeur Jeux Mobiles — Stage</div>
+          <div class="xp-date">Juin - Août 2024</div>
+        </div>
+        <div class="xp-company">Pirouette Cacahouète · Brive-la-Gaillarde</div>
+        <div class="xp-desc">Développement d'une gamme de jeux mobiles Android</div>
+      </div>
+
+      <div class="xp-item" style="border-left-color:var(--cyan)">
+        <div class="xp-header">
+          <div class="xp-title">Freelance — 2 missions en cours</div>
+          <div class="xp-date">En cours</div>
+        </div>
+        <div class="xp-company" style="color:var(--cyan)">Pirouette Cacahouète · Roxanne Zede Diététicienne</div>
+        <div class="xp-desc">Appli d'éveil musical pour enfants · Logiciel de gestion de patientèle sur mesure</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Martin Revol-Buisson · GOP 2025 · ICAN Paris</span>
+    <span><a href="https://martinrevol.github.io/portfolio" target="_blank">martinrevol.github.io/portfolio</a></span>
+  </div>
+
+</div>
+
+<script>
+  function toggle(card){
+    card.classList.toggle('open');
+  }
+</script>
+</body>
+</html>
