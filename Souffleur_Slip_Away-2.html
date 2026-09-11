@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0F14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Fiches de scene tactiles pour l'oral Slip Away, financement mis en avant.">
+<title>Souffleur Slip Away</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<style>
+  /* ---------------------------------------------------------------
+     Souffleur — cue-card companion for the "Slip Away" oral defense.
+     Deliberately single-world dark theme: built to be read one-handed,
+     in a dim room, glowing like the game's own underground network —
+     not a light/dark toggle, a stage prompter screen.
+     ------------------------------------------------------------- */
+
+  :root{
+    color-scheme: dark;
+    --bg:        #0A0F14;
+    --surface:   #131B24;
+    --surface-2: #1B2530;
+    --surface-3: #212C38;
+    --border:    #263140;
+    --border-2:  #34424f;
+    --text:      #F3F0E7;
+    --text-2:    #9BA6B0;
+    --text-3:    #66717B;
+    --accent:    #C98500;
+    --accent-hi: #E8A33D;
+    --accent-soft: rgba(201,133,0,.15);
+    --accent-line: rgba(201,133,0,.45);
+    --good:  #0ca30c;
+    --warn:  #fab219;
+    --bad:   #d03b3b;
+
+    --font-display: "Bebas Neue", "Oswald", sans-serif;
+    --font-body: "Hanken Grotesk", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 9px;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100dvh;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  #app{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(ellipse 520px 260px at 18% -6%, rgba(201,133,0,.10), transparent 60%),
+      radial-gradient(ellipse 460px 240px at 88% 108%, rgba(79,140,163,.08), transparent 60%),
+      var(--bg);
+  }
+
+  /* ---------- brand dot-glyph (echoes the mémoire's own cover mark) ---------- */
+  .brandmark{ position:absolute; width:38px; height:38px; pointer-events:none; opacity:.55; z-index:1; }
+  .brandmark.tl{ top:max(10px, env(safe-area-inset-top)); left:14px; }
+  .brandmark.br{ bottom:max(10px, env(safe-area-inset-bottom)); right:14px; transform:rotate(180deg); }
+  .brandmark circle{ fill:var(--accent-hi); }
+
+  /* ---------------------------- header / progress ---------------------------- */
+  #topbar{
+    flex:0 0 auto;
+    padding: max(14px, env(safe-area-inset-top)) 16px 10px;
+    display:flex; flex-direction:column; gap:10px;
+    z-index:2;
+  }
+  #progress{
+    display:flex; align-items:center; gap:5px;
+    list-style:none; margin:0; padding:0;
+  }
+  .act-group{ display:flex; gap:3px; flex:1 1 auto; }
+  .tick{
+    appearance:none; border:none; padding:0; margin:0;
+    flex:1 1 auto; height:4px; border-radius:3px;
+    background:var(--surface-3);
+    cursor:pointer;
+    transition:background .25s ease, transform .25s ease;
+  }
+  .tick.done{ background:var(--border-2); }
+  .tick.active{ background:var(--accent-hi); box-shadow:0 0 8px rgba(232,163,61,.55); }
+  .tick:focus-visible{ outline:2px solid var(--accent-hi); outline-offset:2px; }
+
+  #meta{ display:flex; align-items:baseline; justify-content:space-between; }
+  #actLabel{
+    font-family:var(--font-mono); font-weight:600; font-size:11px;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent-hi);
+  }
+  #stepCount{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-3);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* --------------------------------- stage --------------------------------- */
+  #stage{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+  }
+  #cardHost{
+    flex:1 1 auto;
+    min-width:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding: 6px 20px 10px;
+    display:flex;
+    touch-action:pan-y;
+  }
+  .card{
+    margin:auto 0;
+    width:100%;
+    display:flex; flex-direction:column; gap:14px;
+    animation: rise .38s cubic-bezier(.16,1,.3,1);
+  }
+  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
+  @keyframes rise{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
+
+  .kicker{
+    font-family:var(--font-mono); font-weight:600; font-size:11px;
+    letter-spacing:.13em; text-transform:uppercase; color:var(--text-3);
+    margin:0;
+  }
+  .kicker b{ color:var(--accent-hi); font-weight:600; }
+
+  .headline{
+    font-family:var(--font-display); font-weight:400;
+    font-size:clamp(1.7rem, 8.6vw, 2.5rem);
+    line-height:1.02; letter-spacing:.01em;
+    color:var(--text); margin:0; text-wrap:balance;
+  }
+  .headline em{ font-style:normal; color:var(--accent-hi); }
+
+  .sub{ margin:0; font-size:14.5px; color:var(--text-2); line-height:1.45; max-width:34ch; }
+
+  .visual{ width:100%; }
+  .visual svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .visual svg text{ font-family:var(--font-body); }
+  .visual .num{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+
+  .caption{ margin:2px 0 0; font-size:11.5px; color:var(--text-3); font-style:italic; }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:2px; }
+  .chip{
+    font-family:var(--font-body); font-weight:600; font-size:12.5px;
+    color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border-2);
+    padding:6px 11px; border-radius:100px; line-height:1.2;
+  }
+  .chip.gold{ background:var(--accent-soft); border-color:var(--accent-line); color:var(--accent-hi); }
+  a.chip{
+    text-decoration:none; position:relative; z-index:4;
+    display:inline-flex; align-items:center; gap:5px;
+    touch-action:manipulation;
+  }
+  a.chip:active{ background:var(--accent-hi); border-color:var(--accent-hi); color:var(--bg); }
+
+  /* ------------------------------ HTML widgets ------------------------------ */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .tile{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md); padding:11px 12px;
+  }
+  .tile .tv{ font-family:var(--font-mono); font-weight:700; font-size:16px; color:var(--accent-hi); font-variant-numeric:tabular-nums; }
+  .tile .tl{ font-size:11.5px; color:var(--text-2); margin-top:3px; line-height:1.3; }
+
+  .lev{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md); padding:12px 13px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .lev .lt{ font-weight:700; font-size:14.5px; }
+  .lev .ld{ font-size:12px; color:var(--text-2); }
+
+  .cols3{ display:flex; gap:8px; }
+  .scol{
+    flex:1 1 0; min-width:0;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-md); padding:11px 9px;
+    display:flex; flex-direction:column; gap:6px; align-items:flex-start;
+    text-align:left;
+  }
+  .scol.reco{ background:var(--accent-soft); border-color:var(--accent-line); }
+  .scol .amt{ font-family:var(--font-mono); font-weight:700; font-size:14.5px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .scol .ventes{ font-size:11px; color:var(--text-2); }
+  .badge{
+    font-family:var(--font-mono); font-size:10px; font-weight:600;
+    letter-spacing:.03em; padding:3px 7px; border-radius:100px;
+    display:inline-flex; align-items:center; gap:4px;
+  }
+  .badge::before{ content:""; width:6px; height:6px; border-radius:50%; }
+  .badge.good{ background:rgba(12,163,12,.16); color:#5fd15f; }
+  .badge.good::before{ background:var(--good); }
+  .badge.warn{ background:rgba(250,178,25,.16); color:#f7c052; }
+  .badge.warn::before{ background:var(--warn); }
+  .badge.bad{ background:rgba(208,59,59,.16); color:#e77373; }
+  .badge.bad::before{ background:var(--bad); }
+
+  .stattile{
+    background:linear-gradient(160deg, var(--accent-soft), transparent 70%);
+    border:1px solid var(--accent-line);
+    border-radius:var(--radius-lg); padding:18px 18px 16px;
+  }
+  .stattile .big{ font-family:var(--font-display); font-size:clamp(2.1rem,11vw,3rem); color:var(--accent-hi); line-height:1; }
+  .stattile .cap{ font-size:12.5px; color:var(--text-2); margin-top:6px; }
+  .stattile .row2{ display:flex; gap:14px; margin-top:12px; padding-top:12px; border-top:1px solid var(--accent-line); }
+  .stattile .row2 div{ flex:1; }
+  .stattile .row2 .v{ font-family:var(--font-mono); font-weight:700; font-size:14px; color:var(--text); }
+  .stattile .row2 .l{ font-size:10.5px; color:var(--text-3); margin-top:2px; }
+
+  .qlist{ display:flex; flex-direction:column; gap:9px; }
+  .qitem{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:10px 12px; }
+  .qitem .q{ font-weight:700; font-size:13.5px; }
+  .qitem .a{ font-size:12px; color:var(--text-2); margin-top:3px; }
+
+  /* ------------------------------- tap zones ------------------------------- */
+  .tapzone{
+    position:absolute; top:0; bottom:0; width:19%;
+    background:transparent; border:none; padding:0; margin:0;
+    z-index:3; touch-action:manipulation;
+  }
+  .tapzone.left{ left:0; }
+  .tapzone.right{ right:0; }
+  .tapzone:active{ background:linear-gradient(90deg, rgba(255,255,255,.03), transparent); }
+  .tapzone.right:active{ background:linear-gradient(270deg, rgba(255,255,255,.03), transparent); }
+
+  /* --------------------------------- footer --------------------------------- */
+  #hint{
+    flex:0 0 auto; z-index:2;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    padding: 8px 16px max(12px, env(safe-area-inset-bottom));
+    color:var(--text-3); font-size:11.5px; font-family:var(--font-mono);
+    letter-spacing:.06em;
+  }
+  #hint .chev{ font-size:14px; opacity:.55; }
+  #hint.hide-hint{ opacity:.4; }
+
+  button{ font:inherit; color:inherit; }
+</style>
+</head>
+<body>
+
+
+<div id="app">
+  <svg class="brandmark tl" viewBox="0 0 40 34" aria-hidden="true">
+    <use href="#dotL"></use>
+  </svg>
+  <svg class="brandmark br" viewBox="0 0 40 34" aria-hidden="true">
+    <use href="#dotL"></use>
+  </svg>
+
+  <header id="topbar">
+    <nav id="progress" aria-label="Progression de l'oral"></nav>
+    <div id="meta">
+      <span id="actLabel">—</span>
+      <span id="stepCount">— / —</span>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="cardHost"></div>
+    <button class="tapzone left" id="prevBtn" aria-label="Carte précédente"></button>
+    <button class="tapzone right" id="nextBtn" aria-label="Carte suivante"></button>
+  </main>
+
+  <footer id="hint">
+    <span class="chev">‹</span><span>glisser / toucher les bords</span><span class="chev">›</span>
+  </footer>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+    </marker>
+    <g id="dotL">
+      <circle cx="3" cy="3" r="2.6"></circle>
+      <circle cx="13" cy="3" r="2.6"></circle>
+      <circle cx="23" cy="3" r="2.6"></circle>
+      <circle cx="33" cy="3" r="2.6"></circle>
+      <circle cx="3" cy="13" r="2.6"></circle>
+      <circle cx="3" cy="23" r="2.6"></circle>
+    </g>
+  </defs>
+</svg>
+
+<script>
+(function(){
+  "use strict";
+
+  var SIM_URL = "https://martinrevol.github.io/simulateur-rentabilite-sarl/Simulateur_SlipAway.html";
+
+  /* ============================== SVG HELPERS ============================== */
+  var NS = "http://www.w3.org/2000/svg";
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+  function node(x,y,w,h,label,opts){
+    opts = opts||{};
+    var fill = opts.fill || "var(--surface-2)";
+    var stroke = opts.stroke || "var(--border-2)";
+    var tcolor = opts.tcolor || "var(--text)";
+    var fs = opts.fs || 12.5;
+    var weight = opts.weight || 600;
+    var cx = x + w/2, cy = y + h/2;
+    var sub = opts.sub ? '<text x="'+cx+'" y="'+(cy+ (opts.subAbove? -fs*0.05 : fs*0.95 - 2))+'" text-anchor="middle" font-size="'+(fs-2.5)+'" fill="var(--text-3)">'+esc(opts.sub)+'</text>' : '';
+    var mainY = opts.sub && !opts.subAbove ? cy - 4 : cy + fs*0.32;
+    return '<g>'+
+      '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(opts.r!=null?opts.r:10)+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.3"></rect>'+
+      '<text x="'+cx+'" y="'+mainY+'" text-anchor="middle" font-size="'+fs+'" font-weight="'+weight+'" fill="'+tcolor+'"'+(opts.mono?' font-family="var(--font-mono)"':'')+'>'+esc(label)+'</text>'+
+      sub+
+      '</g>';
+  }
+
+  function arrow(x1,y1,x2,y2,opts){
+    opts = opts||{};
+    var color = opts.color || "var(--text-3)";
+    var op = opts.op!=null?opts.op:0.65;
+    var dash = opts.dash ? ' stroke-dasharray="3 3"' : '';
+    return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+color+'" stroke-width="1.7" opacity="'+op+'" marker-end="url(#arrow)"'+dash+' color="'+color+'"></line>';
+  }
+
+  function txt(x,y,s,opts){
+    opts = opts||{};
+    return '<text x="'+x+'" y="'+y+'" text-anchor="'+(opts.anchor||'start')+'" font-size="'+(opts.fs||11)+'" font-weight="'+(opts.weight||400)+'" fill="'+(opts.fill||'var(--text-2)')+'"'+(opts.mono?' font-family="var(--font-mono)"':'')+'>'+esc(s)+'</text>';
+  }
+
+  // rounded-right horizontal bar, anchored at baseline x=x0
+  function barH(x0,y,w,h,r,fill){
+    r = Math.min(r, h/2, w>0?w:0.01);
+    if (w<=0) w=0.01;
+    var d = w>r ?
+      'M'+x0+','+y+' L'+(x0+w-r)+','+y+' Q'+(x0+w)+','+y+' '+(x0+w)+','+(y+r)+' L'+(x0+w)+','+(y+h-r)+' Q'+(x0+w)+','+(y+h)+' '+(x0+w-r)+','+(y+h)+' L'+x0+','+(y+h)+' Z'
+      : 'M'+x0+','+y+' L'+(x0+w)+','+y+' L'+(x0+w)+','+(y+h)+' L'+x0+','+(y+h)+' Z';
+    return '<path d="'+d+'" fill="'+fill+'"></path>';
+  }
+
+  // rounded-top vertical bar, anchored at baseline y=yBase
+  function barV(x,yBase,w,h,r,fill){
+    var yTop = yBase - h;
+    r = Math.min(r, w/2, h>0?h:0.01);
+    if (h<=0) h=0.01;
+    var d = 'M'+x+','+yBase+' L'+x+','+(yTop+r)+' Q'+x+','+yTop+' '+(x+r)+','+yTop+' L'+(x+w-r)+','+yTop+' Q'+(x+w)+','+yTop+' '+(x+w)+','+(yTop+r)+' L'+(x+w)+','+yBase+' Z';
+    return '<path d="'+d+'" fill="'+fill+'"></path>';
+  }
+
+  function fig(vb, inner, caption){
+    var parts = vb.trim().split(/\s+/);
+    var w = parts[2], h = parts[3];
+    return '<figure style="margin:0" role="img" aria-label="'+esc(caption||'')+'">'+
+      '<svg viewBox="0 0 '+vb+'" style="aspect-ratio:'+w+'/'+h+'" xmlns="'+NS+'">'+inner+'</svg>'+
+      '</figure>';
+  }
+
+  /* ================================ ACTS ================================ */
+  var ACTS = [
+    {name:"Ouverture"},
+    {name:"Étude de marché"},
+    {name:"Cadre & organisation"},
+    {name:"Financement"},
+    {name:"Planning & communication"},
+    {name:"Conclusion"}
+  ];
+
+  /* ================================ CARDS ================================ */
+  var CARDS = [];
+
+  // ---- Act 0 — Ouverture ----
+  CARDS.push({act:0,
+    headline:"D'une idée de jeu à un <em>studio</em>&nbsp;?",
+    sub:"La question qui doit revenir à la fin de chaque partie.",
+    visual: fig("0 0 320 94",
+      (function(){
+        var pts=[[18,'Intro'],[70,'Marché'],[124,'Cadre'],[196,'Financement'],[252,'Plan'],[300,'Conclusion']];
+        var s='<line x1="18" y1="26" x2="300" y2="26" stroke="var(--border-2)" stroke-width="2"></line>';
+        pts.forEach(function(p,i){
+          var isFin = i===3;
+          var r = isFin?7:4.5;
+          s+='<circle cx="'+p[0]+'" cy="26" r="'+r+'" fill="'+(isFin?'var(--accent-hi)':'var(--surface-3)')+'" stroke="'+(isFin?'var(--accent-hi)':'var(--border-2)')+'" stroke-width="'+(isFin?0:1.6)+'"></circle>';
+          s+=txt(p[0], 50, p[1], {anchor:'middle', fs: isFin?9.5:8.5, fill: isFin?'var(--accent-hi)':'var(--text-3)', weight: isFin?700:500});
+        });
+        s+=txt(196,74,"≈ moitié du temps d'oral",{anchor:'middle',fs:9,fill:'var(--text-3)'});
+        return s;
+      })(),
+      "Parcours de l'oral en 6 temps, financement mis en avant"),
+    chips:["8 personnes","PFE ICAN 2025/2026"]
+  });
+
+  // ---- Act 1 — Marché ----
+  CARDS.push({act:1,
+    headline:"Éditeur = <em>visibilité</em>",
+    sub:"Deux studios indés, un même partenaire.",
+    visual: fig("0 0 320 172",
+      node(8,10,150,36,"Cult of the Lamb",{sub:"Massive Monster",fs:12}) +
+      node(8,110,150,36,"Terra Nil",{sub:"Free Lives",fs:12}) +
+      arrow(158,28,196,58,{}) +
+      arrow(158,128,196,80,{}) +
+      node(190,56,122,36,"Devolver Digital",{fill:"var(--accent-soft)",stroke:"var(--accent-line)",tcolor:"var(--accent-hi)",fs:12}) +
+      arrow(251,92,251,122,{}) +
+      node(191,124,120,30,"Visibilité + public",{fs:11,weight:600})
+      , "Deux studios indépendants convergent vers le même éditeur, Devolver Digital, qui apporte la visibilité"),
+    chips:["Identité forte = apprentissage progressif","Rôle décisif du publisher"]
+  });
+
+  // ---- Act 2 — Cadre (2 cards) ----
+  CARDS.push({act:2,
+    headline:"Pas de <em>SARL</em> immédiate",
+    sub:"4 signaux à réunir avant de créer la société.",
+    visual: fig("0 0 320 158",
+      (function(){
+        var boxes=[["Vertical slice validée",6],["Équipe alignée",84],["PI sécurisée",162],["Signal économique",240]];
+        var s='';
+        boxes.forEach(function(b){ s+=node(b[1],8,74,36,b[0],{fs:9.3,weight:600}); s+=arrow(b[1]+37,44,163,78,{op:.45}); });
+        s+=node(122,84,82,32,"SARL",{fill:"var(--accent-soft)",stroke:"var(--accent-line)",tcolor:"var(--accent-hi)",fs:15,weight:700});
+        s+=arrow(163,116,163,140,{});
+        s+=txt(163,152,"création formelle",{anchor:'middle',fs:9,fill:'var(--text-3)'});
+        return s;
+      })(),
+      "Quatre conditions convergent avant la création formelle de la SARL"),
+  });
+  CARDS.push({act:2,
+    headline:"Gouvernance à <em>3 niveaux</em>",
+    sub:"SARL choisie pour sa simplicité à ce stade — SAS envisageable plus tard.",
+    visual: fig("0 0 320 150",
+      node(90,8,140,32,"Gérant — Martin",{fs:12.5,weight:700}) +
+      arrow(160,40,160,62,{}) +
+      node(60,64,200,32,"Associés (2 à 3)",{fs:12,fill:"var(--accent-soft)",stroke:"var(--accent-line)",tcolor:"var(--accent-hi)"}) +
+      arrow(160,96,160,118,{}) +
+      node(40,120,240,30,"Contributeurs (8 actuels)",{fs:11.5})
+      , "Trois niveaux de gouvernance : gérant, associés fondateurs, contributeurs élargis"),
+    chips:["Temps valorisé aujourd'hui","Salaire = seuil mesurable, pas subjectif"]
+  });
+
+  // ---- Act 3 — Financement (8 cards) ----
+  CARDS.push({act:3,
+    headline:"Réel <em>≠</em> Valorisé",
+    sub:"Deux façons de compter le coût du projet.",
+    visual: fig("0 0 320 150",
+      '<rect x="4" y="14" width="312" height="52" rx="14" fill="var(--surface-2)" stroke="var(--border-2)" stroke-width="1.3"></rect>'+
+      txt(24,38,"Dépenses réelles",{fs:13.5,weight:700,fill:'var(--text)'}) +
+      txt(24,56,"ce que le studio paie vraiment",{fs:10.5}) +
+      txt(296,42,"€",{anchor:'middle',fs:20,fill:'var(--text-3)'}) +
+      '<rect x="4" y="84" width="312" height="52" rx="14" fill="var(--accent-soft)" stroke="var(--accent-line)" stroke-width="1.3"></rect>'+
+      txt(24,108,"Coûts valorisés",{fs:13.5,weight:700,fill:'var(--accent-hi)'}) +
+      txt(24,126,"la valeur du temps de travail fourni",{fs:10.5}) +
+      txt(296,112,"⏱",{anchor:'middle',fs:18,fill:'var(--accent-hi)'})
+      , "Deux lectures du coût : les dépenses réelles payées, et les coûts valorisés qui traduisent le temps de travail en valeur"),
+    chips:["Même si non rémunéré, le temps a une valeur économique"]
+  });
+
+  CARDS.push({act:3,
+    headline:"≈ 4&nbsp;060&nbsp;€ / an de frais réels",
+    sub:"Hors rémunération de l'équipe — full remote.",
+    visual: fig("0 0 320 150",
+      (function(){
+        var rows=[["Adobe",1152],["Rider (4 licences)",676],["Assurance",588],["Autres (Steam, comm., site)",500],["Gestion / comptabilité",468]];
+        var max=1152, barMax=182, x0=100, s='';
+        rows.forEach(function(r,i){
+          var y=8+i*28, w=r[1]/max*barMax;
+          s+=txt(0,y+13,r[0],{fs:9.6,fill:'var(--text-2)'});
+          s+=barH(x0,y+2,w,15,4,'var(--accent)');
+          s+=txt(x0+w+8,y+13,r[1].toLocaleString('fr-FR')+" €",{fs:9.5,mono:true,fill:'var(--text)'});
+        });
+        return s;
+      })(),
+      "Répartition des dépenses réelles annuelles, Adobe en poste principal, total 3 384 € + marge de sécurité"),
+    chips:["+20% de marge de sécurité"]
+  });
+
+  CARDS.push({act:3,
+    headline:"La valeur du <em>temps</em>",
+    sub:null,
+    visual: fig("0 0 300 268",
+      node(20,8,260,40,"72 h / semaine",{fs:16,weight:700,sub:"temps cumulé de l'équipe"}) +
+      arrow(150,48,150,74,{}) + txt(158,64,"÷ 8h/jour",{fs:9,fill:'var(--text-3)'}) +
+      node(20,76,260,40,"9 jours-homme / semaine",{fs:14.5,weight:700}) +
+      arrow(150,116,150,142,{}) + txt(158,132,"× 52 semaines",{fs:9,fill:'var(--text-3)'}) +
+      node(20,144,260,40,"468 jours-homme / an",{fs:14.5,weight:700}) +
+      arrow(150,184,150,210,{}) + txt(158,200,"× 500 €/jour",{fs:9,fill:'var(--text-3)'}) +
+      node(20,212,260,44,"234 000 € / an",{fs:22,weight:700,fill:'var(--accent-soft)',stroke:'var(--accent-line)',tcolor:'var(--accent-hi)',mono:true})
+      , "Chaîne de calcul : 72 heures par semaine deviennent 9 jours-homme, puis 468 par an, valorisés à 234 000 euros par an"),
+    chips:["≈ 2 ETP","500 €/j ≈ 62,50 €/h — coût complet théorique"]
+  });
+
+  CARDS.push({act:3,
+    headline:"Du prix au <em>net</em>",
+    sub:"Prix de vente retenu : 10 € TTC.",
+    visual: fig("0 0 320 172",
+      (function(){
+        var steps=[["Prix TTC",10.00],["Hors TVA (÷1,2)",8.33],["Après Steam −30%",5.83],["Net retenu",5.50]];
+        var baseY=140, maxV=10, scale=96/maxV, x0=10, bw=62, gap=18, s='';
+        steps.forEach(function(st,i){
+          var x=x0+i*(bw+gap), h=st[1]*scale;
+          var last=i===steps.length-1;
+          s+=barV(x,baseY,bw,h,5, last?'var(--accent-hi)':'var(--surface-3)');
+          s+=txt(x+bw/2, baseY-h-8, st[1].toFixed(2).replace('.',',')+" €",{anchor:'middle',fs:11.5,mono:true,weight:700,fill: last?'var(--accent-hi)':'var(--text)'});
+          s+=txt(x+bw/2, baseY+15, st[0], {anchor:'middle',fs:8}).replace('<text ','<text style="white-space:pre" ');
+        });
+        s+='<line x1="4" y1="'+baseY+'" x2="316" y2="'+baseY+'" stroke="var(--border-2)" stroke-width="1.5"></line>';
+        return s;
+      })(),
+      "Cascade du prix de vente : de 10 euros TTC à 5,50 euros nets par vente après TVA, commission Steam et marge de prudence"),
+  });
+
+  CARDS.push({act:3,
+    headline:"3 scénarios de <em>ventes</em>",
+    sub:"Estimation par wishlists Steam × taux de conversion.",
+    visual: fig("0 0 320 170",
+      (function(){
+        var data=[["Pessimiste",1000,false],["Réaliste",5000,true],["Optimiste",10000,false]];
+        var baseY=140, maxV=10000, scale=96/maxV, x0=26, bw=64, gap=30, s='';
+        data.forEach(function(d,i){
+          var x=x0+i*(bw+gap), h=Math.max(d[1]*scale, 8);
+          s+=barV(x,baseY,bw,h,5, d[2]?'var(--accent-hi)':'var(--surface-3)');
+          s+=txt(x+bw/2, baseY-h-9, d[1].toLocaleString('fr-FR'),{anchor:'middle',fs:12,mono:true,weight:700,fill: d[2]?'var(--accent-hi)':'var(--text-2)'});
+          s+=txt(x+bw/2, baseY+18, d[0], {anchor:'middle',fs:9.5, weight: d[2]?700:500, fill: d[2]?'var(--accent-hi)':'var(--text-3)'});
+        });
+        s+='<line x1="6" y1="'+baseY+'" x2="316" y2="'+baseY+'" stroke="var(--border-2)" stroke-width="1.5"></line>';
+        return s;
+      })(),
+      "Comparaison des trois scénarios de ventes, le scénario réaliste à 5000 ventes mis en avant"),
+    chips:["Scénario réaliste retenu pour dimensionner les besoins"]
+  });
+
+  CARDS.push({act:3,
+    headline:"4 leviers de <em>financement</em>",
+    sub:null,
+    visual: '<div class="grid2">'+
+      '<div class="lev"><div class="lt">Subvention</div><div class="ld">non remboursée (CNC…)</div></div>'+
+      '<div class="lev"><div class="lt">Éditeur</div><div class="ld">avance récupérable sur ventes</div></div>'+
+      '<div class="lev"><div class="lt">Levée de fonds</div><div class="ld">dilution du capital</div></div>'+
+      '<div class="lev"><div class="lt">Crowdfunding</div><div class="ld">demande une communauté déjà là</div></div>'+
+      '</div>',
+    chips:["Aucune n'est gratuite — chacune a sa contrepartie"]
+  });
+
+  CARDS.push({act:3,
+    headline:"Quel montant <em>viser</em>&nbsp;?",
+    sub:null,
+    visual: '<div class="cols3">'+
+      '<div class="scol"><div class="amt">0 €</div><div class="ventes">≈ 750–1 000 ventes</div><span class="badge good">Faible</span></div>'+
+      '<div class="scol reco"><div class="amt">50–60 k€</div><div class="ventes">≈ 9–11k ventes</div><span class="badge warn">Modéré</span></div>'+
+      '<div class="scol"><div class="amt">300 k€</div><div class="ventes">≈ 54 500 ventes</div><span class="badge bad">Élevé</span></div>'+
+      '</div>',
+    chips:["Colonne du milieu = meilleur compromis risque / ambition"]
+  });
+
+  CARDS.push({act:3,
+    headline:"Le compromis <em>retenu</em>",
+    sub:null,
+    visual: '<div class="stattile">'+
+      '<div class="big">50–60 k€</div>'+
+      '<div class="cap">financement recommandé — subvention ou éditeur</div>'+
+      '<div class="row2">'+
+        '<div><div class="v">9 000–11 000</div><div class="l">ventes pour équilibrer</div></div>'+
+        '<div><div class="v">4–6 mois</div><div class="l">rémunération partielle des 3 associés</div></div>'+
+      '</div>'+
+      '</div>',
+    chips:[{href:SIM_URL, label:"Ouvrir le simulateur"}]
+  });
+
+  // ---- Act 4 — Planning & Communication ----
+  CARDS.push({act:4,
+    headline:"Piloter dans le <em>temps</em>",
+    sub:"Juillet 2026 → Septembre 2027, 4 jalons.",
+    visual: fig("0 0 320 168",
+      (function(){
+        var pts=[[20,'M1'],[110,'M2'],[200,'M3'],[290,'M4']];
+        var s='<line x1="20" y1="26" x2="290" y2="26" stroke="var(--border-2)" stroke-width="2"></line>';
+        pts.forEach(function(p){ s+='<circle cx="'+p[0]+'" cy="26" r="6" fill="var(--surface-3)" stroke="var(--accent-hi)" stroke-width="1.8"></circle>'; s+=txt(p[0],46,p[1],{anchor:'middle',fs:9,fill:'var(--text-3)'}); });
+        s+=txt(155,66,"1 monde du jeu / jalon",{anchor:'middle',fs:9,fill:'var(--text-3)'});
+        // funnel
+        var chans=[["Steam",30],["TikTok",155],["Créateurs / presse",280]];
+        chans.forEach(function(c){ s+=node(c[1]-46,86,92,30,c[0],{fs:10.5,weight:600}); s+=arrow(c[1],116,155,140,{op:.5}); });
+        s+=node(95,142,120,28,"Wishlists → ventes",{fs:11,weight:700,fill:'var(--accent-soft)',stroke:'var(--accent-line)',tcolor:'var(--accent-hi)'});
+        return s;
+      })(),
+      "Chronologie de production en 4 jalons et entonnoir de communication vers les wishlists puis les ventes"),
+    chips:["Steam = convertir","TikTok = découvrir","Créateurs & presse = amplifier"]
+  });
+
+  // ---- Act 5 — Conclusion ----
+  CARDS.push({act:5,
+    headline:"Une <em>première étape</em>",
+    sub:"Deux trajectoires possibles après la sortie.",
+    visual: fig("0 0 320 150",
+      node(110,6,100,30,"Sortie du jeu",{fs:11.5,weight:700}) +
+      arrow(160,36,90,68,{}) +
+      arrow(160,36,230,68,{}) +
+      node(30,70,120,34,"Succès limité",{fs:11,sub:"~1 000 ventes"}) +
+      node(170,70,120,34,"≥ 5 000 ventes",{fs:11,fill:'var(--accent-soft)',stroke:'var(--accent-line)',tcolor:'var(--accent-hi)'}) +
+      arrow(90,104,90,124,{}) + arrow(230,104,230,124,{}) +
+      node(20,124,140,26,"Portfolio pro",{fs:10}) +
+      node(160,124,140,26,"Studio pérenne + jeu 2",{fs:10,fill:'var(--accent-soft)',stroke:'var(--accent-line)',tcolor:'var(--accent-hi)'})
+      , "Deux trajectoires après la sortie : succès limité qui vaut comme portfolio, ou succès suffisant qui consolide le studio et lance un deuxième jeu"),
+  });
+
+  /* ================================ RENDER ================================ */
+  var total = CARDS.length;
+  var idx = 0;
+
+  var hostEl = document.getElementById('cardHost');
+  var progressEl = document.getElementById('progress');
+  var actLabelEl = document.getElementById('actLabel');
+  var stepCountEl = document.getElementById('stepCount');
+
+  // build act-count map & progress ticks
+  var actCounts = ACTS.map(function(_,ai){ return CARDS.filter(function(c){return c.act===ai;}).length; });
+  (function buildTicks(){
+    var html='';
+    actCounts.forEach(function(count,ai){
+      if(!count) return;
+      html+='<div class="act-group" data-act="'+ai+'">';
+      for(var k=0;k<count;k++){ html+='<button class="tick" type="button"></button>'; }
+      html+='</div>';
+    });
+    progressEl.innerHTML = html;
+  })();
+  var tickEls = Array.prototype.slice.call(progressEl.querySelectorAll('.tick'));
+  tickEls.forEach(function(t,i){ t.addEventListener('click', function(){ go(i); }); });
+
+  function renderCard(i){
+    var c = CARDS[i];
+    var act = ACTS[c.act];
+    var html = '<div class="card">'+
+      '<p class="kicker">'+esc(act.name)+'</p>'+
+      '<h2 class="headline">'+c.headline+'</h2>'+
+      (c.sub? '<p class="sub">'+esc(c.sub)+'</p>':'')+
+      '<div class="visual">'+c.visual+'</div>'+
+      (c.chips? '<div class="chips">'+c.chips.map(function(t){
+        if (t && typeof t === 'object' && t.href){
+          return '<a class="chip gold" href="'+t.href+'" target="_blank" rel="noopener noreferrer">'+esc(t.label)+' <span aria-hidden="true">↗</span></a>';
+        }
+        return '<span class="chip">'+esc(t)+'</span>';
+      }).join('')+'</div>':'')+
+      '</div>';
+    hostEl.innerHTML = html;
+    hostEl.scrollTop = 0;
+  }
+
+  function update(){
+    renderCard(idx);
+    var c = CARDS[idx];
+    actLabelEl.textContent = ACTS[c.act].name;
+    stepCountEl.textContent = (idx+1)+' / '+total;
+    tickEls.forEach(function(t,i){
+      t.classList.toggle('done', i<idx);
+      t.classList.toggle('active', i===idx);
+    });
+  }
+
+  function go(i){
+    idx = Math.max(0, Math.min(total-1, i));
+    update();
+  }
+  function next(){ go(idx+1); }
+  function prev(){ go(idx-1); }
+
+  document.getElementById('nextBtn').addEventListener('click', next);
+  document.getElementById('prevBtn').addEventListener('click', prev);
+
+  window.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight' || e.key===' '){ next(); }
+    else if(e.key==='ArrowLeft'){ prev(); }
+  });
+
+  // swipe gesture on the stage — horizontal dominant only, vertical passes through to scroll
+  (function(){
+    var stage = document.getElementById('stage');
+    var sx=0, sy=0, tracking=false, horiz=null;
+    stage.addEventListener('touchstart', function(e){
+      var t = e.touches[0];
+      sx=t.clientX; sy=t.clientY; tracking=true; horiz=null;
+    }, {passive:true});
+    stage.addEventListener('touchmove', function(e){
+      if(!tracking) return;
+      var t = e.touches[0];
+      var dx=t.clientX-sx, dy=t.clientY-sy;
+      if(horiz===null && (Math.abs(dx)>10 || Math.abs(dy)>10)){ horiz = Math.abs(dx)>Math.abs(dy); }
+    }, {passive:true});
+    stage.addEventListener('touchend', function(e){
+      if(!tracking) return;
+      tracking=false;
+      var t = e.changedTouches[0];
+      var dx=t.clientX-sx;
+      if(horiz && Math.abs(dx)>48){ dx<0 ? next() : prev(); }
+    }, {passive:true});
+  })();
+
+  update();
+
+  if (window.claude && window.claude.hot) {
+    window.claude.hot.snapshot(function(){ return {idx:idx}; });
+    var boot = function(d){ if(d && typeof d.idx==='number'){ idx=d.idx; } update(); };
+    window.claude.hot.ready ? window.claude.hot.ready(boot) : boot(window.claude.hot.data||{});
+  }
+})();
+</script>
+
+</body>
+</html>
